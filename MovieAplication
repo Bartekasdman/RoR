@@ -1,0 +1,42 @@
+class RecommendationGenerator
+    def initialize
+      @users = User.all
+    end
+  
+    def generate_recommendations_for(user)
+      recommendations = {}
+      @users.each do |other_user|
+        next if other_user == user
+        similarity = calculate_similarity(user, other_user)
+        next if similarity < 0.5
+        other_user_ratings = other_user.ratings.select { |r| r.rating > 3 }
+        other_user_ratings.each do |rating|
+          movie = rating.movie
+          if recommendations[movie]
+            recommendations[movie] += similarity * rating.rating
+          else
+            recommendations[movie] = similarity * rating.rating
+          end
+        end
+      end
+      recommendations.sort_by { |_, v| -v }
+    end
+  
+    private
+  
+    def calculate_similarity(user1, user2)
+      ratings1 = user1.ratings
+      ratings2 = user2.ratings
+      return 0 if ratings1.empty? || ratings2.empty?
+      sum1 = ratings1.map(&:rating).reduce(:+)
+      sum2 = ratings2.map(&:rating).reduce(:+)
+      mean1 = sum1 / ratings1.count.to_f
+      mean2 = sum2 / ratings2.count.to_f
+      sum_of_squares1 = ratings1.map { |r| (r.rating - mean1)**2 }.reduce(:+)
+      sum_of_squares2 = ratings2.map { |r| (r.rating - mean2)**2 }.reduce(:+)
+      sum_of_products = ratings1.map { |r1| ratings2.map { |r2| r1.rating * r2.rating if r1.movie == r2.movie } }.flatten.compact.reduce(:+)
+      numerator = sum_of_products - (ratings1.count * mean1 * mean2)
+      denominator = Math.sqrt(sum_of_squares1 * sum_of_squares2)
+      numerator / denominator
+    end
+  end
