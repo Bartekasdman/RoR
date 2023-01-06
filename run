@@ -1,0 +1,9 @@
+# Run this script with `rails runner generate_recommendations.rb`
+
+generator = RecommendationGenerator.new
+User.all.each do |user|
+  recommendations = generator.generate_recommendations_for(user)
+  recommendations.each do |movie, score|
+    Recommendation.create!(user: user, movie: movie, score: score)
+  end
+end
